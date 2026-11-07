@@ -1,0 +1,1891 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bathroom Vanity 3D Showcase | Babylon.js PBR Viewer</title>
+  
+  <!-- Babylon.js Core & Loaders -->
+  <script src="https://cdn.babylonjs.com/babylon.js"></script>
+  <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+  <script src="https://cdn.babylonjs.com/gui/babylon.gui.min.js"></script>
+  <script src="babylon.gridMaterial.min.js"></script>
+  
+  <!-- Mobile AR Support (iPad / iPhone Quick Look & Android Scene Viewer) -->
+  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
+  
+  <!-- Pre-packaged Local Assets (Works offline on file://) -->
+  <script src="assets.js"></script>
+
+  <style>
+    :root {
+      --bg-studio: #585a64;
+      --panel-bg: rgba(24, 28, 40, 0.42);
+      --panel-border: rgba(255, 255, 255, 0.22);
+      --glass-glow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 12px 36px rgba(0, 0, 0, 0.28);
+      --accent-gold: #e2b93b;
+      --accent-gold-hover: #fcd34d;
+      --accent-blue: #38bdf8;
+      --text-main: #f8fafc;
+      --text-muted: #cbd5e1;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: #ffffff;
+      color: var(--text-main);
+    }
+
+    #renderCanvas {
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+      display: block;
+      outline: none;
+    }
+
+    /* Top Navigation Bar */
+    .top-bar {
+      position: absolute;
+      top: 16px;
+      left: 20px;
+      right: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .brand-pill {
+      pointer-events: auto;
+      background: var(--panel-bg);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border: 1px solid var(--panel-border);
+      border-radius: 14px;
+      padding: 10px 18px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: var(--glass-glow);
+    }
+
+    .brand-badge {
+      background: linear-gradient(135deg, #e2b93b, #b38914);
+      color: #000;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      padding: 4px 8px;
+      border-radius: 6px;
+      text-transform: uppercase;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+    }
+
+    .brand-title {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    }
+
+    .brand-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .top-actions {
+      pointer-events: auto;
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-action {
+      background: var(--panel-bg);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      border: 1px solid var(--panel-border);
+      color: var(--text-main);
+      padding: 9px 15px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.25s ease;
+      box-shadow: var(--glass-glow);
+    }
+
+    .btn-action:hover {
+      background: rgba(255, 255, 255, 0.16);
+      border-color: rgba(255, 255, 255, 0.38);
+      transform: translateY(-1px);
+    }
+
+    .btn-action:active {
+      transform: translateY(0);
+    }
+
+    .btn-action.active {
+      border-color: var(--accent-gold);
+      color: var(--accent-gold);
+      background: rgba(226, 185, 59, 0.25);
+    }
+
+    /* Left Floating Control Panel */
+    .control-panel {
+      position: absolute;
+      top: 85px;
+      left: 20px;
+      width: 340px;
+      max-height: calc(100vh - 110px);
+      background: var(--panel-bg);
+      backdrop-filter: blur(26px) saturate(180%);
+      -webkit-backdrop-filter: blur(26px) saturate(180%);
+      border: 1px solid var(--panel-border);
+      border-radius: 20px;
+      padding: 18px;
+      overflow-y: auto;
+      z-index: 10;
+      box-shadow: var(--glass-glow);
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+    }
+
+    .control-panel.collapsed {
+      transform: translateX(-380px);
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .btn-panel-toggle {
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      color: var(--text-main);
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      transition: all 0.2s;
+    }
+
+    .btn-panel-toggle:hover {
+      background: rgba(255, 255, 255, 0.25);
+      border-color: var(--accent-gold);
+      color: var(--accent-gold);
+    }
+
+    .btn-expand-pill {
+      position: absolute;
+      top: 85px;
+      left: 20px;
+      background: var(--panel-bg);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border: 1px solid var(--panel-border);
+      color: var(--text-main);
+      padding: 10px 18px;
+      border-radius: 14px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      z-index: 9;
+      box-shadow: var(--glass-glow);
+      transition: all 0.25s ease;
+    }
+
+    .btn-expand-pill:hover {
+      background: rgba(255, 255, 255, 0.20);
+      border-color: var(--accent-gold);
+      color: var(--accent-gold);
+      transform: translateY(-1px);
+    }
+
+    .control-panel::-webkit-scrollbar {
+      width: 5px;
+    }
+    .control-panel::-webkit-scrollbar-thumb {
+      background: rgba(255,255,255,0.25);
+      border-radius: 10px;
+    }
+
+    .section-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: var(--accent-gold);
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    }
+
+    /* Swatch Grid */
+    .swatch-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .swatch-card {
+      border: 1.5px solid rgba(255,255,255,0.12);
+      border-radius: 12px;
+      padding: 6px;
+      background: rgba(255,255,255,0.06);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.12);
+    }
+
+    .swatch-card:hover {
+      background: rgba(255,255,255,0.15);
+      border-color: rgba(255,255,255,0.4);
+      transform: translateY(-1px);
+    }
+
+    .swatch-card.active {
+      border-color: var(--accent-gold);
+      background: rgba(226, 185, 59, 0.22);
+      box-shadow: 0 0 14px rgba(226, 185, 59, 0.35), inset 0 1px 0 rgba(255,255,255,0.25);
+    }
+
+    .swatch-preview {
+      width: 100%;
+      height: 52px;
+      border-radius: 8px;
+      background-size: cover;
+      background-position: center;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.2), 0 2px 6px rgba(0,0,0,0.25);
+    }
+
+    .swatch-name {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-main);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      width: 100%;
+    }
+
+    .btn-upload {
+      grid-column: span 3;
+      padding: 9px;
+      border: 1px dashed rgba(255,255,255,0.32);
+      border-radius: 10px;
+      background: rgba(255,255,255,0.05);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      color: var(--text-muted);
+      font-size: 11px;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+    }
+
+    .btn-upload:hover {
+      border-color: var(--accent-gold);
+      color: var(--text-main);
+      background: rgba(255,255,255,0.12);
+    }
+
+    /* Interaction & Exploded View */
+    .interaction-group {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .tip-card {
+      background: rgba(226, 185, 59, 0.15);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(226, 185, 59, 0.40);
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 11px;
+      line-height: 1.45;
+      color: #fef08a;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.15);
+    }
+
+    .btn-toggle-main {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid var(--panel-border);
+      background: rgba(255,255,255,0.08);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      color: var(--text-main);
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: all 0.25s ease;
+      box-shadow: var(--glass-glow);
+    }
+
+    .btn-toggle-main:hover {
+      background: rgba(255,255,255,0.16);
+      border-color: rgba(255,255,255,0.38);
+      transform: translateY(-1px);
+    }
+
+    .btn-toggle-main.active {
+      background: linear-gradient(135deg, rgba(226, 185, 59, 0.35), rgba(226, 185, 59, 0.18));
+      border-color: var(--accent-gold);
+      box-shadow: 0 0 16px rgba(226, 185, 59, 0.3);
+    }
+
+    .slider-row {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .slider-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    input[type=range] {
+      width: 100%;
+      accent-color: var(--accent-gold);
+      height: 5px;
+      background: rgba(255,255,255,0.22);
+      border-radius: 5px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    /* Top-Right Quick View Pills */
+    .view-pill-group {
+      display: flex;
+      background: var(--panel-bg);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border: 1px solid var(--panel-border);
+      border-radius: 14px;
+      padding: 4px;
+      gap: 4px;
+      box-shadow: var(--glass-glow);
+    }
+
+    .btn-view-pill {
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 7px 13px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .btn-view-pill:hover {
+      color: var(--text-main);
+      background: rgba(255,255,255,0.10);
+      border-color: rgba(255,255,255,0.18);
+    }
+
+    .btn-view-pill.active {
+      color: #000;
+      background: var(--accent-gold);
+      border-color: var(--accent-gold);
+      font-weight: 700;
+      box-shadow: 0 2px 10px rgba(226, 185, 59, 0.4);
+    }
+
+    /* Part Hover Tooltip */
+    .part-tooltip {
+      position: absolute;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(20, 24, 34, 0.65);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      border: 1px solid var(--accent-gold);
+      padding: 8px 18px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #fff;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s;
+      z-index: 10;
+      box-shadow: var(--glass-glow);
+    }
+
+    /* Loading Overlay */
+    .loading-overlay {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 50% 45%, #6a6c76 0%, #464850 100%);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+      transition: opacity 0.5s ease;
+    }
+
+    .loading-spinner {
+      width: 48px;
+      height: 48px;
+      border: 4px solid rgba(255,255,255,0.15);
+      border-top-color: var(--accent-gold);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-bottom: 16px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .loading-text {
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      color: var(--text-main);
+    }
+
+    /* AR Modal Dialog */
+    .ar-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .ar-modal-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.45);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+    }
+
+    .ar-modal-card {
+      position: relative;
+      background: rgba(24, 28, 40, 0.55);
+      backdrop-filter: blur(32px) saturate(180%);
+      -webkit-backdrop-filter: blur(32px) saturate(180%);
+      border: 1px solid var(--panel-border);
+      border-radius: 24px;
+      padding: 28px 24px;
+      max-width: 380px;
+      width: 90%;
+      text-align: center;
+      box-shadow: var(--glass-glow);
+      z-index: 1001;
+      animation: modalFadeIn 0.25s ease-out;
+    }
+
+    @keyframes modalFadeIn {
+      from { opacity: 0; transform: scale(0.92); }
+      to { opacity: 1; transform: scale(1.0); }
+    }
+
+    .ar-modal-close {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      background: rgba(255, 255, 255, 0.12);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: var(--text-main);
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+
+    .ar-modal-close:hover {
+      background: rgba(255, 255, 255, 0.28);
+      transform: scale(1.08);
+    }
+
+    .ar-modal-icon {
+      font-size: 44px;
+      margin-bottom: 8px;
+    }
+
+    .ar-modal-title {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 6px;
+    }
+
+    .ar-modal-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.5;
+      margin-bottom: 14px;
+    }
+
+    .ar-qr-box {
+      background: #ffffff;
+      padding: 10px;
+      border-radius: 14px;
+      display: inline-block;
+      margin-bottom: 10px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    }
+
+    .ar-qr-box img {
+      display: block;
+      width: 150px;
+      height: 150px;
+    }
+
+    .ar-modal-sub {
+      font-size: 11px;
+      color: var(--accent-gold);
+    }
+
+    /* Photo Studio Modal */
+    .photo-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .photo-modal-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.45);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+    }
+
+    .photo-modal-card {
+      position: relative;
+      background: rgba(24, 28, 40, 0.55);
+      backdrop-filter: blur(32px) saturate(180%);
+      -webkit-backdrop-filter: blur(32px) saturate(180%);
+      border: 1px solid var(--panel-border);
+      border-radius: 24px;
+      padding: 26px;
+      max-width: 440px;
+      width: 92%;
+      text-align: left;
+      box-shadow: var(--glass-glow);
+      z-index: 1001;
+      animation: modalFadeIn 0.22s ease-out;
+    }
+
+    .photo-opt-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 13px;
+    }
+
+    .photo-opt-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--accent-gold);
+    }
+
+    .photo-pill-select {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+
+    .btn-photo-opt {
+      background: rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      color: var(--text-main);
+      padding: 9px 6px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.12);
+    }
+
+    .btn-photo-opt:hover {
+      background: rgba(255, 255, 255, 0.16);
+      border-color: rgba(255, 255, 255, 0.38);
+      transform: translateY(-1px);
+    }
+
+    .btn-photo-opt.active {
+      background: rgba(226, 185, 59, 0.25);
+      border-color: var(--accent-gold);
+      color: var(--accent-gold);
+      font-weight: 700;
+      box-shadow: 0 0 14px rgba(226, 185, 59, 0.35);
+    }
+      border-color: var(--accent-gold);
+      color: var(--accent-gold);
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Hidden Model Viewer for Mobile AR (iPad Quick Look & Android Scene Viewer) -->
+  <model-viewer id="arViewer" src="model/bathroomvanity.glb" ar ar-modes="webxr scene-viewer quick-look" camera-controls touch-action="pan-y" style="display:none;"></model-viewer>
+
+  <!-- AR Modal (Scan with iPad/Phone or launch directly) -->
+  <div id="arModal" class="ar-modal" style="display:none;">
+    <div class="ar-modal-backdrop" onclick="closeARModal()"></div>
+    <div class="ar-modal-card">
+      <button class="ar-modal-close" onclick="closeARModal()">✕</button>
+      <div class="ar-modal-icon">📱</div>
+      <div class="ar-modal-title">View Vanity in AR</div>
+      <div class="ar-modal-desc">
+        Place this 36" Bathroom Vanity in real 1:1 scale on your floor using your iPad or Mobile Phone.
+      </div>
+      
+      <div class="ar-qr-box">
+        <img id="arQrImg" src="" alt="Scan for AR">
+      </div>
+      <div class="ar-modal-sub">
+        Scan this QR with your <strong>iPad</strong> or <strong>Phone</strong> camera
+      </div>
+
+      <div style="display: flex; gap: 8px; justify-content: center; margin-top: 14px;">
+        <button class="btn-action" style="background: var(--accent-gold); color: #000; font-weight: 700;" onclick="launchDirectAR()">
+          🚀 Launch AR
+        </button>
+        <button class="btn-action" onclick="closeARModal()">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- High-Quality Photo Studio Modal -->
+  <div id="photoModal" class="photo-modal" style="display:none;">
+    <div class="photo-modal-backdrop" onclick="closePhotoModal()"></div>
+    <div class="photo-modal-card">
+      <button class="ar-modal-close" onclick="closePhotoModal()">✕</button>
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+        <span style="font-size:26px;">📸</span>
+        <div>
+          <div style="font-size:16px; font-weight:700; color:var(--text-main);">High-Quality Photo Studio</div>
+          <div style="font-size:11px; color:var(--text-muted);">Render high-resolution, print-ready images</div>
+        </div>
+      </div>
+
+      <!-- 1. Resolution / Quality Selection -->
+      <div class="photo-opt-group">
+        <div class="photo-opt-label">1. Resolution (Chất lượng hình ảnh)</div>
+        <div class="photo-pill-select" id="groupResolution">
+          <button class="btn-photo-opt active" data-res="8k" onclick="selectPhotoRes('8k', this)">
+            🌟 8K Ultra<br><span style="font-size:9px; opacity:0.8;">7680 × 4320</span>
+          </button>
+          <button class="btn-photo-opt" data-res="4k" onclick="selectPhotoRes('4k', this)">
+            💎 4K UHD<br><span style="font-size:9px; opacity:0.8;">3840 × 2160</span>
+          </button>
+          <button class="btn-photo-opt" data-res="2k" onclick="selectPhotoRes('2k', this)">
+            ⚡ 2K QHD<br><span style="font-size:9px; opacity:0.8;">2560 × 1440</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 2. Anti-Aliasing (MSAA Samples) -->
+      <div class="photo-opt-group">
+        <div class="photo-opt-label">2. Anti-Aliasing (Khử răng cưa mịn màng)</div>
+        <div class="photo-pill-select" id="groupSamples" style="grid-template-columns: repeat(2, 1fr);">
+          <button class="btn-photo-opt active" data-samples="8" onclick="selectPhotoSamples(8, this)">
+            ✨ 8x MSAA (Maximum Smooth)
+          </button>
+          <button class="btn-photo-opt" data-samples="4" onclick="selectPhotoSamples(4, this)">
+            ⚡ 4x MSAA (Standard)
+          </button>
+        </div>
+      </div>
+
+      <!-- 3. Background -->
+      <div class="photo-opt-group">
+        <div class="photo-opt-label">3. Background (Phông nền)</div>
+        <div class="photo-pill-select" id="groupBackground" style="grid-template-columns: repeat(2, 1fr);">
+          <button class="btn-photo-opt active" data-bg="studio" onclick="selectPhotoBg('studio', this)">
+            🔘 Studio Grey
+          </button>
+          <button class="btn-photo-opt" data-bg="transparent" onclick="selectPhotoBg('transparent', this)">
+            🏁 Transparent PNG
+          </button>
+        </div>
+      </div>
+
+      <!-- 4. Framing -->
+      <div class="photo-opt-group">
+        <div class="photo-opt-label">4. Framing (Góc chụp)</div>
+        <div class="photo-pill-select" id="groupFraming" style="grid-template-columns: repeat(2, 1fr);">
+          <button class="btn-photo-opt active" data-framing="current" onclick="selectPhotoFraming('current', this)">
+            🎯 Current View
+          </button>
+          <button class="btn-photo-opt" data-framing="center" onclick="selectPhotoFraming('center', this)">
+            📐 Auto-Centered
+          </button>
+        </div>
+      </div>
+
+      <!-- Action Button -->
+      <div style="margin-top: 16px;">
+        <button id="btnDoRender" class="btn-action" style="width:100%; justify-content:center; background:var(--accent-gold); color:#000; font-weight:700; padding:12px; font-size:13px;" onclick="executeRender()">
+          ✨ Render & Download Image
+        </button>
+        <div id="renderStatus" style="font-size:11px; text-align:center; color:var(--text-muted); margin-top:8px; display:none;">
+          ⏳ Rendering high-resolution image... Please wait.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3D Canvas -->
+  <canvas id="renderCanvas"></canvas>
+
+  <!-- Loading Screen -->
+  <div id="loadingOverlay" class="loading-overlay">
+    <div class="loading-spinner"></div>
+    <div id="loadingText" class="loading-text">Loading Bathroom Vanity 3D Model...</div>
+  </div>
+
+  <!-- Top Bar -->
+  <div class="top-bar">
+    <div class="brand-pill">
+      <span class="brand-badge">PBR 3D</span>
+      <div>
+        <div class="brand-title">Bathroom Vanity 36"</div>
+        <div class="brand-sub">845 × 505 × 845 mm | Quartz Top & European Concealed Hinges</div>
+      </div>
+    </div>
+    <div class="top-actions">
+      <!-- Camera View Presets on Top-Right -->
+      <div class="view-pill-group">
+        <button class="btn-view-pill active" onclick="setCameraPreset('iso', this)">Isometric</button>
+        <button class="btn-view-pill" onclick="setCameraPreset('front', this)">Front View</button>
+        <button class="btn-view-pill" onclick="setCameraPreset('side', this)">Side View</button>
+        <button class="btn-view-pill" onclick="setCameraPreset('top', this)">Top View</button>
+      </div>
+
+      <button id="btnEnterAR" class="btn-action" title="View in Augmented Reality (AR) on iPad or Mobile Phone" onclick="triggerAR()">
+        <span>📱</span> View in AR
+      </button>
+      <button id="btnSnapshot" class="btn-action" title="Capture high-resolution photo with quality settings" onclick="openPhotoModal()">
+        <span>📸</span> Take Photo
+      </button>
+    </div>
+  </div>
+
+  <!-- Floating Button to Expand Menu when Collapsed -->
+  <button id="btnExpandPanel" class="btn-expand-pill" style="display:none;" title="Mở rộng menu (Expand Options)" onclick="toggleControlPanel()">
+    <span>⚙️ Options</span>
+    <span style="color:var(--accent-gold); font-size:11px;">▶</span>
+  </button>
+
+  <!-- Left Control Panel -->
+  <div id="controlPanel" class="control-panel">
+    
+    <!-- Panel Header with Collapse Button -->
+    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.12); padding-bottom:10px;">
+      <span style="font-size:12px; font-weight:800; letter-spacing:0.8px; text-transform:uppercase; color:var(--text-main);">Customizer</span>
+      <button class="btn-panel-toggle" title="Thu nhỏ menu (Collapse Menu)" onclick="toggleControlPanel()">◀</button>
+    </div>
+    
+    <!-- Section 1: Countertop Top Maps -->
+    <div>
+      <div class="section-title">
+        <span>1. Countertop (Top Map)</span>
+        <span id="lblCurrentTop" style="color: #fff; font-size: 10px;">Calacatta Quartz</span>
+      </div>
+      <div id="swatchGridTop" class="swatch-grid">
+        <div class="swatch-card active" onclick="selectTopMap('calacatta', this)">
+          <div id="prevTopCalacatta" class="swatch-preview"></div>
+          <span class="swatch-name">Calacatta Quartz</span>
+        </div>
+        <div class="swatch-card" onclick="selectTopMap('green', this)">
+          <div id="prevTopGreen" class="swatch-preview"></div>
+          <span class="swatch-name">Forest Green</span>
+        </div>
+        <div class="swatch-card" onclick="selectTopMap('classic', this)">
+          <div id="prevTopClassic" class="swatch-preview"></div>
+          <span class="swatch-name">Classic Marble</span>
+        </div>
+        <input type="file" id="fileCustomTop" accept="image/*" style="display:none;" onchange="handleCustomTop(event)">
+        <button class="btn-upload" onclick="document.getElementById('fileCustomTop').click()">
+          📁 Upload Custom Top Map (+)
+        </button>
+      </div>
+      <div class="slider-row" style="margin-top: 8px;">
+        <div class="slider-header">
+          <span>Countertop Roughness</span>
+          <span id="lblTopRoughness">0.10</span>
+        </div>
+        <input type="range" id="rngTopRoughness" min="0.0" max="0.8" step="0.02" value="0.10" oninput="setTopRoughness(this.value)">
+      </div>
+    </div>
+
+    <!-- Section 2: Wood Finishes -->
+    <div>
+      <div class="section-title">
+        <span>2. Cabinet Wood (Wood Map)</span>
+        <span id="lblCurrentWood" style="color: #fff; font-size: 10px;">Natural Oak</span>
+      </div>
+      <div id="swatchGridWood" class="swatch-grid">
+        <div class="swatch-card active" onclick="selectWood('oak', this)">
+          <div id="prevOak" class="swatch-preview"></div>
+          <span class="swatch-name">Natural Oak</span>
+        </div>
+        <div class="swatch-card" onclick="selectWood('pine', this)">
+          <div id="prevPine" class="swatch-preview"></div>
+          <span class="swatch-name">Nordic Pine</span>
+        </div>
+        <div class="swatch-card" onclick="selectWood('walnut', this)">
+          <div id="prevWalnut" class="swatch-preview"></div>
+          <span class="swatch-name">Dark Walnut</span>
+        </div>
+        <input type="file" id="fileCustomWood" accept="image/*" style="display:none;" onchange="handleCustomWood(event)">
+        <button class="btn-upload" onclick="document.getElementById('fileCustomWood').click()">
+          📁 Upload Custom Wood Map (+)
+        </button>
+      </div>
+      <div class="slider-row" style="margin-top: 8px;">
+        <div class="slider-header">
+          <span>Wood Surface Roughness</span>
+          <span id="lblRoughness">0.38</span>
+        </div>
+        <input type="range" id="rngRoughness" min="0.1" max="0.9" step="0.02" value="0.38" oninput="setWoodRoughness(this.value)">
+      </div>
+      <div class="slider-row" style="margin-top: 8px;">
+        <div class="slider-header">
+          <span>Wood Pattern Scale (Grain Size)</span>
+          <span id="lblWoodScale">1.25x (-20% Fine Grain)</span>
+        </div>
+        <input type="range" id="rngWoodScale" min="0.8" max="2.5" step="0.05" value="1.25" oninput="setWoodScale(this.value)">
+      </div>
+    </div>
+
+    <!-- Section 3: Faucet Finish -->
+    <div>
+      <div class="section-title">
+        <span>3. Faucet Finish</span>
+        <span id="lblCurrentFaucet" style="color: #fff; font-size: 10px;">Brushed Golden</span>
+      </div>
+      <div class="swatch-grid" style="grid-template-columns: repeat(3, 1fr);">
+        <div class="swatch-card active" onclick="selectFaucet('gold', this)">
+          <div class="swatch-preview" style="background: linear-gradient(135deg, #d4af37, #997819);"></div>
+          <span class="swatch-name">Brushed Gold</span>
+        </div>
+        <div class="swatch-card" onclick="selectFaucet('silver', this)">
+          <div class="swatch-preview" style="background: linear-gradient(135deg, #e8e8e8, #a0a0a0);"></div>
+          <span class="swatch-name">Chrome / Silver</span>
+        </div>
+        <div class="swatch-card" onclick="selectFaucet('black', this)">
+          <div class="swatch-preview" style="background: linear-gradient(135deg, #2b2b2b, #111111);"></div>
+          <span class="swatch-name">Matte Black</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 4: Interactive Features -->
+    <div class="interaction-group">
+      <div class="section-title">
+        <span>4. Interactive Features</span>
+      </div>
+      
+      <!-- Exploded View Toggle (Slider removed as requested) -->
+      <button id="btnExplodeToggle" class="btn-toggle-main" onclick="toggleExplosion()">
+        <span>💥 Explode Parts (Explore)</span>
+        <span id="lblExplodeState" style="color: var(--accent-gold)">ASSEMBLED</span>
+      </button>
+    </div>
+
+  </div>
+
+
+  <!-- Part Hover Tooltip -->
+  <div id="partTooltip" class="part-tooltip">Cabinet Part</div>
+
+  <!-- Application Logic -->
+  <script>
+    const canvas = document.getElementById("renderCanvas");
+    const engine = new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true });
+    let scene, camera, pipeline;
+
+    // Materials
+    let woodMaterial, topMaterial, sinkMaterial, faucetMaterial, plumbingMaterial;
+
+    // Center coordinates of the entire vanity assembly (matching Sandbox default target)
+    const VANITY_CENTER = new BABYLON.Vector3(0.0, 0.332, -0.473);
+
+    // Minimum Camera Zoom Distance: Stops right at the outer surface, CANNOT penetrate the model
+    const MIN_ZOOM_RADIUS = 1.35; // meters
+    const MAX_ZOOM_RADIUS = 4.50; // meters
+
+    // European Concealed Hinge Motion (105° Opening angle)
+    // 4-bar linkage kinematics: sweeps forward (+Z) and outward (+/- X) while rotating
+    let doorLeftMesh, doorRightMesh;
+    let doorLeftOrigPos, doorRightOrigPos;
+    let isDoorLeftOpen = false;
+    let isDoorRightOpen = false;
+    let doorLeftAnimGroup = null;
+    let doorRightAnimGroup = null;
+    let doorTargetAngle = 0;
+    let doorCurrentAngle = 0;
+    const MAX_DOOR_ANGLE = 105 * (Math.PI / 180); // exactly 105 degrees = 1.8326 rad
+
+    // Exploded View Data
+    let explodedParts = [];
+    let currentExplosion = 0;
+    let targetExplosion = 0;
+    let isExploded = false;
+
+    // Auto rotate
+    let autoRotate = false;
+
+    // Texture Dictionaries (Base64 offline + relative path fallback)
+    const woodTextures = {
+      oak: window.BABYLON_ASSETS ? window.BABYLON_ASSETS.wood_oak : "wood map/afgsdfsd.jpg",
+      pine: window.BABYLON_ASSETS ? window.BABYLON_ASSETS.wood_pine : "wood map/pine.png",
+      walnut: window.BABYLON_ASSETS ? window.BABYLON_ASSETS.wood_walnut : "wood map/wood_07-2.jpg"
+    };
+
+    const topTextures = {
+      calacatta: window.BABYLON_ASSETS ? window.BABYLON_ASSETS.top_calacatta : "top map/calacatta_white_quartz.jpg",
+      green: window.BABYLON_ASSETS ? window.BABYLON_ASSETS.top_green : "top map/forest green marble.jpg",
+      classic: window.BABYLON_ASSETS ? window.BABYLON_ASSETS.top_classic : "top map/MARBLE.jpg"
+    };
+
+    // Set preview thumbnails in UI
+    document.getElementById("prevOak").style.backgroundImage = `url('${woodTextures.oak}')`;
+    document.getElementById("prevPine").style.backgroundImage = `url('${woodTextures.pine}')`;
+    document.getElementById("prevWalnut").style.backgroundImage = `url('${woodTextures.walnut}')`;
+
+    document.getElementById("prevTopCalacatta").style.backgroundImage = `url('${topTextures.calacatta}')`;
+    document.getElementById("prevTopGreen").style.backgroundImage = `url('${topTextures.green}')`;
+    document.getElementById("prevTopClassic").style.backgroundImage = `url('${topTextures.classic}')`;
+
+    // Part Friendly Names for Inspector Tooltip (English)
+    const partNames = {
+      "Layer:0": "Front Left Leg (Solid Wood Post)",
+      "Layer:0 (1)": "Front Right Leg (Solid Wood Post)",
+      "Layer:0 (2)": "Back Left Leg (Solid Wood Post)",
+      "Layer:0 (3)": "Back Right Leg (Solid Wood Post)",
+      "Layer:0 (4)": "Left Side Panel",
+      "Layer:0 (5)": "Right Side Panel",
+      "Layer:0 (6)": "Lower Front Rail",
+      "Layer:0 (7)": "Lower Rear Rail",
+      "Layer:0 (8)": "Lower Side Rails",
+      "Layer:0 (9)": "Slatted Shelf Deck (Bottom Storage)",
+      "Layer:0 (10)": "Cabinet Bottom Panel",
+      "Layer:0 (11)": "Cabinet Back Panel",
+      "Layer:0 (12)": "Top Front Stretcher",
+      "Layer:0 (13)": "Top Rear Mounting Cleat",
+      "Layer:0 (14)": "Interior U-Shelf (Plumbing Cutout)",
+      "Layer:0 (15)": "Left Cabinet Door (Click to Open/Close)",
+      "Layer:0 (16)": "Right Cabinet Door (Click to Open/Close)",
+      "Layer:0 (17)": "Quartz Countertop",
+      "Layer:0 (18)": "Undermount Porcelain Sink",
+      "Layer:0 (19)": "P-Trap Drain Assembly",
+      "Layer:0 (20)": "Shutoff Valves & Supply Lines",
+      "Layer:0 (21)": "Base Glides (Levelers)",
+      "Object001": "Brushed Champagne Gold Faucet & Handles"
+    };
+
+    // Explosion Directions Mapping
+    const explodeOffsets = {
+      "Layer:0 (17)": new BABYLON.Vector3(0, 0.38, 0),       // Top
+      "Object001": new BABYLON.Vector3(0, 0.65, 0),          // Faucet
+      "Layer:0 (18)": new BABYLON.Vector3(0, 0.18, 0),       // Sink
+      "Layer:0 (4)": new BABYLON.Vector3(-0.35, 0, 0),       // Side L
+      "Layer:0 (5)": new BABYLON.Vector3(0.35, 0, 0),        // Side R
+      "Layer:0 (11)": new BABYLON.Vector3(0, 0, -0.35),      // Back
+      "Layer:0 (13)": new BABYLON.Vector3(0, 0.10, -0.25),   // Rear Cleat
+      "Layer:0 (12)": new BABYLON.Vector3(0, 0.10, 0.22),    // Front Stretcher
+      "Layer:0 (14)": new BABYLON.Vector3(0, 0.05, 0.22),    // U Shelf
+      "Layer:0 (10)": new BABYLON.Vector3(0, -0.22, 0),      // Bottom
+      "Layer:0 (9)": new BABYLON.Vector3(0, -0.15, 0),       // Deck
+      "Layer:0 (6)": new BABYLON.Vector3(0, -0.15, 0.20),    // Rail Front
+      "Layer:0 (7)": new BABYLON.Vector3(0, -0.15, -0.20),   // Rail Back
+      "Layer:0": new BABYLON.Vector3(-0.18, -0.12, 0.18),    // Leg FL
+      "Layer:0 (1)": new BABYLON.Vector3(0.18, -0.12, 0.18), // Leg FR
+      "Layer:0 (2)": new BABYLON.Vector3(-0.18, -0.12, -0.18),// Leg BL
+      "Layer:0 (3)": new BABYLON.Vector3(0.18, -0.12, -0.18), // Leg BR
+      "Layer:0 (19)": new BABYLON.Vector3(0, -0.25, -0.15),  // PTrap
+      "Layer:0 (20)": new BABYLON.Vector3(0, -0.15, -0.30),  // Valves
+      "Layer:0 (15)": new BABYLON.Vector3(-0.16, 0, 0.28),   // Door L
+      "Layer:0 (16)": new BABYLON.Vector3(0.16, 0, 0.28)     // Door R
+    };
+
+    // Create Scene
+    const createScene = async function () {
+      scene = new BABYLON.Scene(engine);
+      
+      // Clean White Studio Background
+      scene.clearColor = new BABYLON.Color4(1.0, 1.0, 1.0, 1.0);
+
+      // 1. Sàn bắt bóng đổ tiếp xúc mờ dịu (Contact Shadow Catcher)
+      const shadowPlane = BABYLON.MeshBuilder.CreatePlane("groundShadow", { size: 100 }, scene);
+      shadowPlane.rotation.x = Math.PI / 2;
+      shadowPlane.position.y = -0.214; // Cao độ tiếp xúc sàn của 4 chân tủ
+      const shadowMat = new BABYLON.BackgroundMaterial("shadowMat", scene);
+      shadowMat.primaryColor = new BABYLON.Color3(1, 1, 1);
+      shadowMat.shadowLevel = 0.65;
+      shadowPlane.material = shadowMat;
+      shadowPlane.receiveShadows = true;
+
+      // 2. Sàn lưới GridMaterial trong suốt không thấy biên (Infinite Studio Grid Floor)
+      const gridPlane = BABYLON.MeshBuilder.CreatePlane("groundGrid", { size: 100 }, scene);
+      gridPlane.rotation.x = Math.PI / 2;
+      gridPlane.position.y = -0.2138; // Nằm trên mặt bóng đổ 0.2mm để không bị z-fighting
+      
+      if (typeof BABYLON.GridMaterial !== "undefined") {
+        const gridMat = new BABYLON.GridMaterial("gridMat", scene);
+        gridMat.mainColor = new BABYLON.Color3(1.0, 1.0, 1.0);
+        gridMat.lineColor = new BABYLON.Color3(0.80, 0.80, 0.84);
+        gridMat.gridRatio = 0.2; // Ô lưới 20cm
+        gridMat.majorUnitFrequency = 5; // Đường chính cách mỗi 1m
+        gridMat.minorUnitVisibility = 0.38;
+        gridMat.opacity = 0.40; // Độ mờ vừa vặn để bóng đổ trên sàn hiển thị sắc nét
+        gridPlane.material = gridMat;
+      }
+
+      // Camera: Sandbox Default Parameters & Centered on Vanity
+      // Sandbox defaults: alpha: -5.518, beta: 1.162, radius: 1.935, target: (0, 0.332, -0.473)
+      camera = new BABYLON.ArcRotateCamera("Camera", -5.518, 1.162, 1.935, new BABYLON.Vector3(0, 0.332, -0.473), scene);
+      camera.attachControl(canvas, true);
+      camera.fov = 0.80;
+      camera.minZ = 0.02;
+      camera.maxZ = 2286.0;
+      camera.lowerRadiusLimit = 1.15; // Strictly stops camera right before penetrating front/top
+      camera.upperRadiusLimit = 7.50;
+      camera.wheelPrecision = 50;
+      camera.pinchPrecision = 100;
+      camera.inertia = 0.90;
+
+      // Studio Environment Lighting (Reflection Map for PBR metals & polished quartz)
+      const envSource = (window.BABYLON_ASSETS && window.BABYLON_ASSETS.env_bridge)
+        ? window.BABYLON_ASSETS.env_bridge 
+        : "https://assets.babylonjs.com/environments/sanGiuseppeBridge.env";
+      
+      try {
+        const envTexture = BABYLON.CubeTexture.CreateFromPrefilteredData(envSource, scene, ".env");
+        envTexture.rotationY = 5.54;
+        envTexture.level = 1.0;
+        scene.environmentTexture = envTexture;
+        scene.environmentIntensity = 1.0; // Babylon Sandbox default
+      } catch (e) {
+        console.warn("Falling back to online Babylon Sandbox reflection map:", e);
+        const envTexture = BABYLON.CubeTexture.CreateFromPrefilteredData("https://assets.babylonjs.com/environments/sanGiuseppeBridge.env", scene, ".env");
+        envTexture.rotationY = 5.54;
+        envTexture.level = 1.0;
+        scene.environmentTexture = envTexture;
+        scene.environmentIntensity = 1.0;
+      }
+
+      // Photographic Tone Mapping & Color Calibration (Filmic ACES)
+      scene.imageProcessingConfiguration.toneMappingEnabled = true;
+      scene.imageProcessingConfiguration.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_ACES;
+      scene.imageProcessingConfiguration.contrast = 1.15;
+      scene.imageProcessingConfiguration.exposure = 1.0;
+
+      // Studio Post-Processing Pipeline (Bloom & FXAA)
+      pipeline = new BABYLON.DefaultRenderingPipeline("studioPipeline", true, scene, [camera]);
+      pipeline.bloomEnabled = true;
+      pipeline.bloomThreshold = 0.82;
+      pipeline.bloomWeight = 0.22;
+      pipeline.bloomKernel = 64;
+      pipeline.bloomScale = 0.5;
+      pipeline.samples = 4;
+      pipeline.fxaaEnabled = true;
+
+      // Load 3D Model with its native lights, PBR materials, UVW coordinates, and animations
+      await loadModel();
+
+      return scene;
+    };
+
+    function applyTopTexture(urlOrData) {
+      if (!topMaterial) return;
+      // InvertY MUST be false for GLTF models exported from 3ds Max!
+      const tex = new BABYLON.Texture(urlOrData, scene, false, false);
+      tex.wrapU = BABYLON.Texture.WRAP_ADDRESSMODE;
+      tex.wrapV = BABYLON.Texture.WRAP_ADDRESSMODE;
+      tex.uScale = 1.0;
+      tex.vScale = 1.0;
+      topMaterial.albedoTexture = tex;
+    }
+
+    function applyWoodTexture(urlOrData) {
+      if (!woodMaterial) return;
+      // InvertY MUST be false for GLTF models exported from 3ds Max!
+      const tex = new BABYLON.Texture(urlOrData, scene, false, false);
+      tex.wrapU = BABYLON.Texture.WRAP_ADDRESSMODE;
+      tex.wrapV = BABYLON.Texture.WRAP_ADDRESSMODE;
+      tex.uScale = 1.0; // Giữ nguyên UVW chuẩn từ file
+      tex.vScale = 1.0;
+      woodMaterial.albedoTexture = tex;
+    }
+
+    async function loadModel() {
+      const glbSource = window.BABYLON_ASSETS ? window.BABYLON_ASSETS.glb : "model/bathroomvanity.glb";
+      
+      try {
+        await BABYLON.SceneLoader.AppendAsync("", glbSource, scene, null, ".glb");
+
+        // 1. ÁNH SÁNG TỪ FILE MỚI: Khởi tạo các nguồn sáng từ TransformNodes (VRayLight001 - VRayLight004)
+        const lightNodes = scene.transformNodes.filter(n => n.name.toLowerCase().includes("vraylight") || n.name.toLowerCase().includes("light"));
+        let shadowGenKey = null;
+        let shadowGenTop = null;
+
+        if (lightNodes.length > 0) {
+          lightNodes.forEach(node => {
+            const m = node.getWorldMatrix();
+            // Trong 3ds Max/VRay, hướng chiếu của đèn là theo trục -Z cục bộ
+            const dir = BABYLON.Vector3.TransformNormal(new BABYLON.Vector3(0, 0, -1), m).normalize();
+            const light = new BABYLON.DirectionalLight(node.name + "_Light", dir, scene);
+            light.position = node.getAbsolutePosition().clone();
+
+            if (node.name === "VRayLight001") {
+              light.intensity = 0.85; // Đèn trần
+              shadowGenTop = new BABYLON.ShadowGenerator(2048, light);
+              shadowGenTop.usePercentageCloserFiltering = true;
+              shadowGenTop.filteringQuality = BABYLON.ShadowGenerator.QUALITY_HIGH;
+              shadowGenTop.bias = 0.001;
+              shadowGenTop.normalBias = 0.015;
+            } else if (node.name === "VRayLight002") {
+              light.intensity = 1.6; // Đèn chính trước-phải
+              shadowGenKey = new BABYLON.ShadowGenerator(2048, light);
+              shadowGenKey.usePercentageCloserFiltering = true;
+              shadowGenKey.filteringQuality = BABYLON.ShadowGenerator.QUALITY_HIGH;
+              shadowGenKey.bias = 0.001;
+              shadowGenKey.normalBias = 0.015;
+            } else if (node.name === "VRayLight003") {
+              light.intensity = 1.1; // Đèn phụ trước-trái
+            } else if (node.name === "VRayLight004") {
+              light.intensity = 0.35; // Đèn sau lưng
+            } else {
+              light.intensity = 1.0;
+            }
+            light.diffuse = new BABYLON.Color3(1.0, 1.0, 1.0);
+          });
+        }
+
+        // 2. VẬT LIỆU, UVW TỪ FILE MỚI: Giữ nguyên 100% thiết lập gốc từ file 3ds Max
+        woodMaterial = scene.getMaterialByName("wood");
+        topMaterial = scene.getMaterialByName("top");
+        sinkMaterial = scene.getMaterialByName("sink");
+        faucetMaterial = scene.getMaterialByName("metal");
+
+        // 3. CHUYỂN ĐỘNG TỪ FILE MỚI: Tách thành 2 cụm animation riêng biệt cho từng cánh cửa
+        const allAnim = scene.animationGroups.find(ag => ag.name === "All Animations") || (scene.animationGroups.length > 0 ? scene.animationGroups[0] : null);
+        if (allAnim) {
+          // Buộc cụm animation gốc chạy về frame 0 để đóng hoàn toàn 2 cánh cửa (tránh trường hợp file 3ds Max bị lưu ở frame 200 mở)
+          allAnim.play(false);
+          allAnim.pause();
+          allAnim.goToFrame(0);
+
+          const leftTargeted = allAnim.targetedAnimations.find(t => t.target.name === "Layer:0 (16)");
+          const rightTargeted = allAnim.targetedAnimations.find(t => t.target.name === "Layer:0 (15)");
+
+          if (leftTargeted) {
+            doorLeftAnimGroup = new BABYLON.AnimationGroup("DoorLeftAnim", scene);
+            doorLeftAnimGroup.addTargetedAnimation(leftTargeted.animation, leftTargeted.target);
+            doorLeftAnimGroup.play(false);
+            doorLeftAnimGroup.pause();
+            doorLeftAnimGroup.goToFrame(0);
+          }
+
+          if (rightTargeted) {
+            doorRightAnimGroup = new BABYLON.AnimationGroup("DoorRightAnim", scene);
+            doorRightAnimGroup.addTargetedAnimation(rightTargeted.animation, rightTargeted.target);
+            doorRightAnimGroup.play(false);
+            doorRightAnimGroup.pause();
+            doorRightAnimGroup.goToFrame(0);
+          }
+
+          allAnim.stop();
+        }
+
+        // Process all meshes
+        scene.meshes.forEach(mesh => {
+          if (mesh.name === "__root__" || mesh.name.includes("ground")) return;
+          if (shadowGenKey) shadowGenKey.addShadowCaster(mesh);
+          if (shadowGenTop) shadowGenTop.addShadowCaster(mesh);
+          mesh.receiveShadows = true;
+
+          // Register Doors for Direct Click Interaction (Viewer Left: Layer:0 (16), Viewer Right: Layer:0 (15))
+          if (mesh.name === "Layer:0 (16)") {
+            doorLeftMesh = mesh;
+            doorLeftOrigPos = mesh.position.clone();
+            mesh.rotationQuaternion = new BABYLON.Quaternion(0.7071068, 0, 0, 0.7071067); // Khóa cánh trái đóng kín 100% lúc khởi động
+            mesh.isPickable = true;
+          } else if (mesh.name === "Layer:0 (15)") {
+            doorRightMesh = mesh;
+            doorRightOrigPos = mesh.position.clone();
+            mesh.rotationQuaternion = new BABYLON.Quaternion(0.7071068, 0, 0, 0.7071067); // Khóa cánh phải đóng kín 100% lúc khởi động
+            mesh.isPickable = true;
+          }
+
+          // Store original position for Exploded View
+          const offset = explodeOffsets[mesh.name] || new BABYLON.Vector3(0, 0, 0);
+          explodedParts.push({
+            node: mesh,
+            origPos: mesh.position.clone(),
+            offset: offset
+          });
+
+          // Action Manager for Pointer Events
+          mesh.actionManager = new BABYLON.ActionManager(scene);
+
+          // Direct Door Click Action: Bấm cánh nào thì chỉ mở đúng cánh đó!
+          if (mesh.name === "Layer:0 (16)") {
+            mesh.actionManager.registerAction(new BABYLON.ExecuteCodeAction(
+              BABYLON.ActionManager.OnPickTrigger,
+              () => toggleLeftDoor()
+            ));
+          } else if (mesh.name === "Layer:0 (15)") {
+            mesh.actionManager.registerAction(new BABYLON.ExecuteCodeAction(
+              BABYLON.ActionManager.OnPickTrigger,
+              () => toggleRightDoor()
+            ));
+          }
+
+          // Hover Tooltip & Cursor
+          mesh.actionManager.registerAction(new BABYLON.ExecuteCodeAction(
+            BABYLON.ActionManager.OnPointerOverTrigger,
+            () => {
+              if (mesh.name === "Layer:0 (15)" || mesh.name === "Layer:0 (16)") {
+                canvas.style.cursor = "pointer";
+              }
+              showTooltip(mesh.name);
+            }
+          ));
+          mesh.actionManager.registerAction(new BABYLON.ExecuteCodeAction(
+            BABYLON.ActionManager.OnPointerOutTrigger,
+            () => {
+              canvas.style.cursor = "default";
+              hideTooltip();
+            }
+          ));
+        });
+
+        // Hide loading screen
+        const overlay = document.getElementById("loadingOverlay");
+        overlay.style.opacity = "0";
+        setTimeout(() => overlay.style.display = "none", 500);
+
+      } catch (err) {
+        console.error("Model loading error:", err);
+        document.getElementById("loadingText").innerText = "Error loading 3D model: " + err.message;
+      }
+    }
+
+    // --- Interactive Functions ---
+
+    // Toggle Left Control Panel (Collapse / Expand)
+    function toggleControlPanel() {
+      const panel = document.getElementById("controlPanel");
+      const expandBtn = document.getElementById("btnExpandPanel");
+      const isCollapsed = panel.classList.toggle("collapsed");
+      expandBtn.style.display = isCollapsed ? "flex" : "none";
+    }
+
+    // Dynamic Swatch Card Creation on Upload
+    function addSwatchCard(containerId, dataUrl, displayName, onSelect) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+      const uploadBtn = container.querySelector(".btn-upload");
+
+      const card = document.createElement("div");
+      card.className = "swatch-card active";
+      card.onclick = function () {
+        container.querySelectorAll(".swatch-card").forEach(c => c.classList.remove("active"));
+        card.classList.add("active");
+        onSelect(dataUrl, displayName);
+      };
+
+      const preview = document.createElement("div");
+      preview.className = "swatch-preview";
+      preview.style.backgroundImage = `url('${dataUrl}')`;
+
+      const title = document.createElement("span");
+      title.className = "swatch-name";
+      title.innerText = displayName;
+      title.title = displayName;
+
+      card.appendChild(preview);
+      card.appendChild(title);
+
+      // Deselect existing cards in container
+      container.querySelectorAll(".swatch-card").forEach(c => c.classList.remove("active"));
+
+      // Insert new icon directly before the upload button
+      container.insertBefore(card, uploadBtn);
+    }
+
+    // 1. Top Map Selection & Roughness
+    function selectTopMap(type, el) {
+      document.querySelectorAll("#swatchGridTop .swatch-card").forEach(p => p.classList.remove("active"));
+      if (el) el.classList.add("active");
+      
+      const names = { calacatta: "Calacatta Quartz", green: "Forest Green", classic: "Classic Marble" };
+      document.getElementById("lblCurrentTop").innerText = names[type] || type;
+
+      applyTopTexture(topTextures[type]);
+    }
+
+    function handleCustomTop(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        const dataUrl = e.target.result;
+        const displayName = file.name.replace(/\.[^/.]+$/, "");
+
+        // Dynamically add icon map into the list
+        addSwatchCard("swatchGridTop", dataUrl, displayName, (url, name) => {
+          applyTopTexture(url);
+          document.getElementById("lblCurrentTop").innerText = name;
+        });
+
+        applyTopTexture(dataUrl);
+        document.getElementById("lblCurrentTop").innerText = displayName;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function setTopRoughness(val) {
+      const v = parseFloat(val);
+      document.getElementById("lblTopRoughness").innerText = v.toFixed(2);
+      if (topMaterial) {
+        topMaterial.roughness = v;
+        topMaterial.microSurface = 1.0 - v;
+        if (topMaterial.clearCoat) {
+          topMaterial.clearCoat.roughness = Math.min(v * 0.4, 0.15);
+        }
+      }
+    }
+
+    // 2. Wood Selection, Roughness & Pattern Scale
+    function selectWood(type, el) {
+      document.querySelectorAll("#swatchGridWood .swatch-card").forEach(c => c.classList.remove("active"));
+      if (el) el.classList.add("active");
+      
+      const names = { oak: "Natural Oak", pine: "Nordic Pine", walnut: "Dark Walnut" };
+      document.getElementById("lblCurrentWood").innerText = names[type] || type;
+
+      applyWoodTexture(woodTextures[type]);
+    }
+
+    function handleCustomWood(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        const dataUrl = e.target.result;
+        const displayName = file.name.replace(/\.[^/.]+$/, "");
+
+        // Dynamically add icon map into the list
+        addSwatchCard("swatchGridWood", dataUrl, displayName, (url, name) => {
+          applyWoodTexture(url);
+          document.getElementById("lblCurrentWood").innerText = name;
+        });
+
+        applyWoodTexture(dataUrl);
+        document.getElementById("lblCurrentWood").innerText = displayName;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function setWoodRoughness(val) {
+      const v = parseFloat(val);
+      if (woodMaterial) {
+        woodMaterial.roughness = v;
+        woodMaterial.microSurface = 1.0 - v;
+        if (woodMaterial.clearCoat) {
+          woodMaterial.clearCoat.roughness = Math.min(v * 0.5, 0.35);
+        }
+      }
+      document.getElementById("lblRoughness").innerText = v.toFixed(2);
+    }
+
+    function setWoodScale(val) {
+      currentWoodScale = parseFloat(val);
+      const grainReduction = Math.round((1.0 - 1.0 / currentWoodScale) * 100);
+      document.getElementById("lblWoodScale").innerText = currentWoodScale.toFixed(2) + "x" + (grainReduction > 0 ? ` (-${grainReduction}% Grain)` : "");
+      if (woodMaterial && woodMaterial.albedoTexture) {
+        woodMaterial.albedoTexture.uScale = currentWoodScale;
+        woodMaterial.albedoTexture.vScale = currentWoodScale;
+      }
+    }
+
+    // 3. Faucet Finishes
+    function selectFaucet(type, el) {
+      document.querySelectorAll(".swatch-card").forEach(c => {
+        if (c.parentElement && c.parentElement.previousElementSibling && c.parentElement.previousElementSibling.innerText.includes("Faucet")) {
+          c.classList.remove("active");
+        }
+      });
+      if (el) el.classList.add("active");
+
+      const names = { gold: "Brushed Golden", silver: "Chrome / Silver", black: "Matte Black" };
+      const lbl = document.getElementById("lblCurrentFaucet");
+      if (lbl) lbl.innerText = names[type] || type;
+
+      if (!faucetMaterial) return;
+      if (type === "gold") {
+        faucetMaterial.albedoColor = new BABYLON.Color3(1.0, 0.78, 0.38);
+        faucetMaterial.reflectivityColor = new BABYLON.Color3(1.0, 0.86, 0.48);
+        faucetMaterial.metallic = 1.0;
+        faucetMaterial.roughness = 0.22;
+        faucetMaterial.microSurface = 0.78;
+      } else if (type === "silver") {
+        faucetMaterial.albedoColor = new BABYLON.Color3(0.97, 0.97, 0.98);
+        faucetMaterial.reflectivityColor = new BABYLON.Color3(0.98, 0.98, 0.98);
+        faucetMaterial.metallic = 1.0;
+        faucetMaterial.roughness = 0.05;
+        faucetMaterial.microSurface = 0.95;
+      } else if (type === "black") {
+        faucetMaterial.albedoColor = new BABYLON.Color3(0.04, 0.04, 0.045);
+        faucetMaterial.reflectivityColor = new BABYLON.Color3(0.15, 0.15, 0.15);
+        faucetMaterial.metallic = 0.12;
+        faucetMaterial.roughness = 0.36;
+        faucetMaterial.microSurface = 0.64;
+      }
+    }
+
+    // 4. Door Toggles: Mở từng cánh riêng biệt khi người dùng bấm, không tự mở
+    function toggleLeftDoor() {
+      isDoorLeftOpen = !isDoorLeftOpen;
+      if (doorLeftAnimGroup) {
+        doorLeftAnimGroup.stop();
+        if (isDoorLeftOpen) {
+          doorLeftAnimGroup.start(false, 1.2, 0, 200, false);
+          doorLeftAnimGroup.speedRatio = 1.2;
+        } else {
+          doorLeftAnimGroup.start(false, 1.0, 0, 200, false);
+          doorLeftAnimGroup.goToFrame(200);
+          doorLeftAnimGroup.speedRatio = -1.2;
+        }
+      }
+    }
+
+    function toggleRightDoor() {
+      isDoorRightOpen = !isDoorRightOpen;
+      if (doorRightAnimGroup) {
+        doorRightAnimGroup.stop();
+        if (isDoorRightOpen) {
+          doorRightAnimGroup.start(false, 1.2, 0, 200, false);
+          doorRightAnimGroup.speedRatio = 1.2;
+        } else {
+          doorRightAnimGroup.start(false, 1.0, 0, 200, false);
+          doorRightAnimGroup.goToFrame(200);
+          doorRightAnimGroup.speedRatio = -1.2;
+        }
+      }
+    }
+
+    function toggleDoors() {
+      // Toggle cả hai cánh nếu gọi từ hàm chung
+      if (isDoorLeftOpen || isDoorRightOpen) {
+        if (isDoorLeftOpen) toggleLeftDoor();
+        if (isDoorRightOpen) toggleRightDoor();
+      } else {
+        toggleLeftDoor();
+        toggleRightDoor();
+      }
+    }
+
+    // Outer Edge Hinge Kinematics:
+    // Pivots exactly at each door's outer edge, swinging open forward into the Front View (+Z)
+    function updateDoorSwing(angle) {
+      if (!doorLeftMesh || !doorRightMesh) return;
+
+      const halfWidth = 0.18075;
+
+      // 1. Viewer's Left Door ('Layer:0 (16)'):
+      // Outer hinge at world X = -0.363 / local X = +0.363
+      // Swings forward into Front View (+Z world / -Z local)
+      doorLeftMesh.rotation.y = angle;
+      doorLeftMesh.position.x = 0.363 - halfWidth * Math.cos(angle);
+      doorLeftMesh.position.z = -0.215125 - halfWidth * Math.sin(angle);
+
+      // 2. Viewer's Right Door ('Layer:0 (15)'):
+      // Outer hinge at world X = +0.363 / local X = -0.363
+      // Swings forward into Front View (+Z world / -Z local)
+      doorRightMesh.rotation.y = -angle;
+      doorRightMesh.position.x = -0.363 + halfWidth * Math.cos(angle);
+      doorRightMesh.position.z = -0.215125 - halfWidth * Math.sin(angle);
+    }
+
+    // 5. Exploded View Toggle (Slider removed)
+    function toggleExplosion() {
+      isExploded = !isExploded;
+      targetExplosion = isExploded ? 1.0 : 0.0;
+      
+      const btn = document.getElementById("btnExplodeToggle");
+      const lbl = document.getElementById("lblExplodeState");
+
+      if (isExploded) {
+        btn.classList.add("active");
+        lbl.innerText = "EXPLODED";
+        BABYLON.Animation.CreateAndStartAnimation("camExpR", camera, "radius", 30, 20, camera.radius, 2.85, 2);
+      } else {
+        btn.classList.remove("active");
+        lbl.innerText = "ASSEMBLED";
+        BABYLON.Animation.CreateAndStartAnimation("camExpR", camera, "radius", 30, 20, camera.radius, 1.935, 2);
+      }
+    }
+
+    function applyExplosion(factor) {
+      explodedParts.forEach(item => {
+        if (item.node === doorLeftMesh || item.node === doorRightMesh) {
+          if (doorCurrentAngle < 0.05) {
+            item.node.position.copyFrom(item.origPos.add(item.offset.scale(factor)));
+          }
+        } else {
+          item.node.position.copyFrom(item.origPos.add(item.offset.scale(factor)));
+        }
+      });
+    }
+
+    // Shortest angular path helper
+    function getShortestAngle(current, target) {
+      let diff = (target - current) % (Math.PI * 2);
+      if (diff > Math.PI) diff -= Math.PI * 2;
+      if (diff < -Math.PI) diff += Math.PI * 2;
+      return current + diff;
+    }
+
+    // 6. Camera Presets (Front View ALWAYS looks directly at the cabinet doors)
+    function setCameraPreset(preset, btn) {
+      document.querySelectorAll(".btn-view-pill").forEach(p => p.classList.remove("active"));
+      if (btn) btn.classList.add("active");
+
+      let targetA, targetB, targetR;
+      let targetT = new BABYLON.Vector3(0, 0.332, -0.473);
+
+      if (preset === "iso") {
+        // Exact Sandbox default view
+        targetA = -5.518; targetB = 1.162; targetR = 1.935;
+      } else if (preset === "front") {
+        // Front view looking directly at the cabinet doors
+        targetA = Math.PI / 2.0; targetB = Math.PI / 2.05; targetR = 2.00;
+      } else if (preset === "side") {
+        // Side view looking directly at the right side profile of vanity
+        targetA = 0.0; targetB = Math.PI / 2.05; targetR = 1.95;
+      } else if (preset === "top") {
+        // Top view looking down at countertop
+        targetA = Math.PI / 2.0; targetB = 0.15; targetR = 2.10;
+      }
+
+      targetA = getShortestAngle(camera.alpha, targetA);
+
+      // Smooth camera interpolation
+      BABYLON.Animation.CreateAndStartAnimation("camA", camera, "alpha", 30, 20, camera.alpha, targetA, 2);
+      BABYLON.Animation.CreateAndStartAnimation("camB", camera, "beta", 30, 20, camera.beta, targetB, 2);
+      BABYLON.Animation.CreateAndStartAnimation("camR", camera, "radius", 30, 20, camera.radius, targetR, 2);
+      BABYLON.Animation.CreateAndStartAnimation("camT", camera, "target", 30, 20, camera.target, targetT, 2);
+
+      pauseAutoRotate();
+      scheduleResumeAutoRotate();
+    }
+
+    // 7. Auto-Rotate Management: Auto-rotates by default, pauses on user interaction, resumes after 5 seconds of inactivity
+    let isAutoRotating = true;
+    let idleTimer = null;
+
+    function pauseAutoRotate() {
+      isAutoRotating = false;
+      if (idleTimer) {
+        clearTimeout(idleTimer);
+        idleTimer = null;
+      }
+    }
+
+    function scheduleResumeAutoRotate() {
+      if (idleTimer) clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => {
+        isAutoRotating = true;
+      }, 5000); // Resume auto-rotate after 5 seconds of inactivity
+    }
+
+    // Interaction Listeners (Pause immediately on interaction, resume after 5s)
+    window.addEventListener("pointerdown", () => pauseAutoRotate());
+    window.addEventListener("pointerup", () => scheduleResumeAutoRotate());
+    window.addEventListener("wheel", () => {
+      pauseAutoRotate();
+      scheduleResumeAutoRotate();
+    }, { passive: true });
+    window.addEventListener("touchstart", () => pauseAutoRotate(), { passive: true });
+    window.addEventListener("touchend", () => scheduleResumeAutoRotate(), { passive: true });
+    document.addEventListener("click", () => {
+      pauseAutoRotate();
+      scheduleResumeAutoRotate();
+    });
+
+    // 8. AR (Augmented Reality) Experience for iPad, iPhone, and Android Phone
+    async function triggerAR() {
+      pauseAutoRotate();
+
+      // Mobile Device Detection (iPad, iPhone, Android)
+      const isMobile = /iPad|iPhone|iPod|android/i.test(navigator.userAgent) || 
+                       (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+      if (isMobile) {
+        await launchDirectAR();
+      } else {
+        // Desktop / Laptop: Display QR code & instructions to scan with iPad or Phone
+        showARModal();
+      }
+    }
+
+    async function launchDirectAR() {
+      // 1. Try Native WebXR AR Session first if available
+      try {
+        if (navigator.xr && await BABYLON.WebXRSessionManager.IsSessionSupportedAsync("immersive-ar")) {
+          const xr = await scene.createDefaultXRExperienceAsync({
+            uiOptions: { sessionMode: "immersive-ar" }
+          });
+          await xr.baseExperience.enterXRAsync("immersive-ar", "local-floor");
+          closeARModal();
+          return;
+        }
+      } catch (err) {
+        console.warn("WebXR AR session not directly accessible, attempting mobile fallback:", err);
+      }
+
+      // 2. Android Scene Viewer
+      const isAndroid = /android/i.test(navigator.userAgent);
+      if (isAndroid) {
+        const glbUrl = window.location.href.replace(/index\.html.*$/, "") + "model/bathroomvanity.glb";
+        const intentUrl = `intent://arvr.google.com/scene-viewer/1.0?file=${encodeURIComponent(glbUrl)}&mode=ar_only#Intent;scheme=https;package=com.google.android.googlequicksearchbox;action=android.intent.action.VIEW;end;`;
+        window.location.href = intentUrl;
+        return;
+      }
+
+      // 3. iOS / iPadOS Quick Look via model-viewer
+      const mv = document.getElementById("arViewer");
+      if (mv && typeof mv.activateAR === "function") {
+        mv.activateAR();
+        closeARModal();
+        return;
+      }
+
+      // Fallback
+      showARModal();
+    }
+
+    function showARModal() {
+      const modal = document.getElementById("arModal");
+      const qrImg = document.getElementById("arQrImg");
+      if (qrImg) {
+        qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(window.location.href)}`;
+      }
+      modal.style.display = "flex";
+    }
+
+    function closeARModal() {
+      const modal = document.getElementById("arModal");
+      modal.style.display = "none";
+      scheduleResumeAutoRotate();
+    }
+
+    // 9. High-Quality Photo Studio Controls (8K Ultra, 4K UHD, 2K QHD, 8x MSAA, Backgrounds)
+    let selectedRes = "8k";
+    let selectedSamples = 8;
+    let selectedBg = "studio";
+    let selectedFraming = "current";
+
+    function openPhotoModal() {
+      pauseAutoRotate();
+      document.getElementById("photoModal").style.display = "flex";
+    }
+
+    function closePhotoModal() {
+      document.getElementById("photoModal").style.display = "none";
+      scheduleResumeAutoRotate();
+    }
+
+    function selectPhotoRes(res, btn) {
+      selectedRes = res;
+      document.querySelectorAll("#groupResolution .btn-photo-opt").forEach(b => b.classList.remove("active"));
+      if (btn) btn.classList.add("active");
+    }
+
+    function selectPhotoSamples(samples, btn) {
+      selectedSamples = parseInt(samples);
+      document.querySelectorAll("#groupSamples .btn-photo-opt").forEach(b => b.classList.remove("active"));
+      if (btn) btn.classList.add("active");
+    }
+
+    function selectPhotoBg(bg, btn) {
+      selectedBg = bg;
+      document.querySelectorAll("#groupBackground .btn-photo-opt").forEach(b => b.classList.remove("active"));
+      if (btn) btn.classList.add("active");
+    }
+
+    function selectPhotoFraming(framing, btn) {
+      selectedFraming = framing;
+      document.querySelectorAll("#groupFraming .btn-photo-opt").forEach(b => b.classList.remove("active"));
+      if (btn) btn.classList.add("active");
+    }
+
+    async function executeRender() {
+      const btn = document.getElementById("btnDoRender");
+      const status = document.getElementById("renderStatus");
+      btn.disabled = true;
+      btn.style.opacity = "0.6";
+      status.style.display = "block";
+      status.innerText = `⏳ Rendering ${selectedRes.toUpperCase()} (${selectedSamples}x MSAA)... Please wait.`;
+
+      // Allow UI thread to repaint
+      await new Promise(r => setTimeout(r, 60));
+
+      const resMap = {
+        "8k": { width: 7680, height: 4320 },
+        "4k": { width: 3840, height: 2160 },
+        "2k": { width: 2560, height: 1440 }
+      };
+      const dimensions = resMap[selectedRes] || resMap["8k"];
+
+      const prevTarget = camera.target.clone();
+      const prevRadius = camera.radius;
+      const prevClearColor = scene.clearColor.clone();
+
+      if (selectedFraming === "center") {
+        camera.target = VANITY_CENTER.clone();
+        if (camera.radius < 2.20) camera.radius = 2.20;
+      }
+
+      if (selectedBg === "transparent") {
+        scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
+      }
+
+      BABYLON.Tools.CreateScreenshotUsingRenderTarget(
+        engine,
+        camera,
+        dimensions,
+        function (data) {
+          // Restore camera & background
+          camera.target = prevTarget;
+          camera.radius = prevRadius;
+          scene.clearColor = prevClearColor;
+
+          btn.disabled = false;
+          btn.style.opacity = "1";
+          status.style.display = "none";
+          closePhotoModal();
+
+          // Trigger download
+          const a = document.createElement("a");
+          a.href = data;
+          const bgSuffix = selectedBg === "transparent" ? "_Transparent" : "";
+          a.download = `Bathroom_Vanity_${selectedRes.toUpperCase()}_${selectedSamples}xMSAA${bgSuffix}.png`;
+          a.click();
+        },
+        "image/png",
+        selectedSamples,
+        true
+      );
+    }
+
+    // Tooltip Helper
+    const tooltip = document.getElementById("partTooltip");
+    function showTooltip(meshName) {
+      const friendly = partNames[meshName] || meshName;
+      tooltip.innerText = friendly;
+      tooltip.style.opacity = "1";
+    }
+    function hideTooltip() {
+      tooltip.style.opacity = "0";
+    }
+
+    // Main Render Loop
+    createScene().then(() => {
+      engine.runRenderLoop(() => {
+        // Auto Rotate (pauses on user interaction, resumes after 5 seconds)
+        if (isAutoRotating) {
+          camera.alpha += 0.003;
+        }
+
+        // Smooth Door Opening Interpolation (fallback if no file animation)
+        if (!doorLeftAnimGroup && !doorRightAnimGroup && doorLeftMesh && doorRightMesh && currentExplosion < 0.05) {
+          doorCurrentAngle += (doorTargetAngle - doorCurrentAngle) * 0.12;
+          updateDoorSwing(doorCurrentAngle);
+        }
+
+        // Smooth Exploded View Interpolation
+        if (Math.abs(currentExplosion - targetExplosion) > 0.001) {
+          currentExplosion += (targetExplosion - currentExplosion) * 0.1;
+          applyExplosion(currentExplosion);
+        }
+
+        scene.render();
+      });
+    });
+
+    window.addEventListener("resize", () => engine.resize());
+  </script>
+</body>
+</html>
