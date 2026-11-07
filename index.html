@@ -1679,17 +1679,17 @@
       let targetT = new BABYLON.Vector3(0, 0.332, -0.473);
 
       if (preset === "iso") {
-        // Exact Sandbox default view
-        targetA = -5.518; targetB = 1.162; targetR = 1.935;
+        // Isometric 45-degree studio perspective
+        targetA = -Math.PI / 4.0; targetB = 1.162; targetR = 2.05;
       } else if (preset === "front") {
         // Front view looking directly at the cabinet doors
-        targetA = -Math.PI / 2.0; targetB = Math.PI / 2.15; targetR = 2.00;
+        targetA = 0.0; targetB = Math.PI / 2.15; targetR = 2.00;
       } else if (preset === "side") {
-        // Side view looking directly at the right side profile of vanity
-        targetA = 0.0; targetB = Math.PI / 2.05; targetR = 1.95;
+        // Side view looking directly at the side profile of vanity
+        targetA = Math.PI / 2.0; targetB = Math.PI / 2.05; targetR = 1.95;
       } else if (preset === "top") {
         // Top view looking down at countertop
-        targetA = Math.PI / 2.0; targetB = 0.15; targetR = 2.10;
+        targetA = 0.0; targetB = 0.15; targetR = 2.10;
       }
 
       targetA = getShortestAngle(camera.alpha, targetA);
