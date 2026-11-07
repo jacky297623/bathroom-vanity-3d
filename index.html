@@ -1250,7 +1250,7 @@
             light.position = node.getAbsolutePosition().clone();
 
             if (node.name === "VRayLight001") {
-              light.intensity = 0.25; // Đèn trần dịu nhẹ, không làm chói sáng bề mặt kệ bên trong
+              light.intensity = 1; // Đèn trần dịu nhẹ, không làm chói sáng bề mặt kệ bên trong
               light.autoUpdateExtends = false;
               light.orthoLeft = -1.5;
               light.orthoRight = 1.5;
@@ -1266,7 +1266,7 @@
               shadowGenTop.bias = 0.0004;
               shadowGenTop.darkness = 0;
             } else if (node.name === "VRayLight002") {
-              light.intensity = 1.35; // Đèn chính studio (Key Light) tạo bóng đổ mềm mại (Soft Shadow)
+              light.intensity = 2.5; // Đèn chính studio (Key Light) tạo bóng đổ mềm mại (Soft Shadow)
               light.autoUpdateExtends = false;
               light.orthoLeft = -1.6;
               light.orthoRight = 1.6;
