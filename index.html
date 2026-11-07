@@ -1250,7 +1250,7 @@
             light.position = node.getAbsolutePosition().clone();
 
             if (node.name === "VRayLight001") {
-              light.intensity = 1; // Đèn trần dịu nhẹ, không làm chói sáng bề mặt kệ bên trong
+              light.intensity = 0.5; // Đèn trần dịu nhẹ, không làm chói sáng bề mặt kệ bên trong
               light.autoUpdateExtends = false;
               light.orthoLeft = -1.5;
               light.orthoRight = 1.5;
@@ -1273,7 +1273,7 @@
               light.orthoTop = 1.6;
               light.orthoBottom = -1.6;
               light.shadowMinZ = 0.5;
-              light.shadowMaxZ = 7.0;
+              light.shadowMaxZ = 5;
               shadowGenKey = new BABYLON.ShadowGenerator(2048, light);
               shadowGenKey.useBlurCloseExponentialShadowMap = true;
               shadowGenKey.blurKernel = 24;
