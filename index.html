@@ -689,7 +689,9 @@
 <body>
 
   <!-- Hidden Model Viewer for Mobile AR (iPad Quick Look & Android Scene Viewer) -->
-  <model-viewer id="arViewer" src="model/bathroomvanity.glb" ar ar-modes="webxr scene-viewer quick-look" camera-controls touch-action="pan-y" style="display:none;"></model-viewer>
+  <model-viewer id="arViewer" src="bathroomvanity.glb" ar ar-modes="webxr scene-viewer quick-look" camera-controls touch-action="pan-y" style="position:fixed; top:-9999px; left:-9999px; width:1px; height:1px; opacity:0; pointer-events:none;">
+    <button id="defaultArButton" slot="ar-button" style="display:none;"></button>
+  </model-viewer>
 
   <!-- AR Modal (Scan with iPad/Phone or launch directly) -->
   <div id="arModal" class="ar-modal" style="display:none;">
@@ -796,6 +798,29 @@
         <div id="renderStatus" style="font-size:11px; text-align:center; color:var(--text-muted); margin-top:8px; display:none;">
           ⏳ Rendering high-resolution image... Please wait.
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile / iPad Photo Result Modal -->
+  <div id="photoResultModal" class="photo-modal" style="display:none;">
+    <div class="photo-modal-backdrop" onclick="closePhotoResultModal()"></div>
+    <div class="photo-modal-card" style="max-width: 480px; text-align: center;">
+      <button class="photo-modal-close" onclick="closePhotoResultModal()">✕</button>
+      <div class="photo-modal-title">📸 Photo Captured!</div>
+      <div style="font-size:12px; color:var(--text-muted); margin-bottom:12px;">
+        Chạm giữ vào ảnh bên dưới để chọn <strong>Lưu vào Ảnh (Save to Photos)</strong> hoặc bấm nút mở toàn màn hình:
+      </div>
+      <div style="max-height: 280px; overflow: hidden; border-radius: 12px; border: 1px solid rgba(255,255,255,0.15); margin-bottom: 14px; background: rgba(0,0,0,0.2);">
+        <img id="photoResultImg" src="" style="width:100%; height:auto; display:block; object-fit:contain;" alt="Vanity Render">
+      </div>
+      <div style="display:flex; gap:10px;">
+        <button id="btnOpenPhotoTab" class="btn-action" style="flex:1; justify-content:center; background:var(--accent-gold); color:#000; font-weight:700;">
+          📥 Mở ảnh toàn màn hình
+        </button>
+        <button class="btn-action" style="flex:1; justify-content:center; background:rgba(255,255,255,0.15); color:#fff;" onclick="closePhotoResultModal()">
+          ✕ Đóng
+        </button>
       </div>
     </div>
   </div>
@@ -1077,37 +1102,52 @@
     };
 
     // Create Scene
+    
+    // Helper: Base64 to Blob converter
+    function dataURLtoBlob(dataurl) {
+      const arr = dataurl.split(',');
+      const mime = arr[0].match(/:(.*?);/)[1];
+      const bstr = atob(arr[1]);
+      let n = bstr.length;
+      const u8arr = new Uint8Array(n);
+      while (n--) {
+        u8arr[n] = bstr.charCodeAt(n);
+      }
+      return new Blob([u8arr], { type: mime });
+    }
+
+    // Helper: Initialize hidden model-viewer for mobile AR (Quick Look / Scene Viewer)
+    function initARViewer() {
+      const arViewer = document.getElementById("arViewer");
+      if (!arViewer) return;
+      try {
+        if (window.BABYLON_ASSETS && window.BABYLON_ASSETS.glb) {
+          const blob = dataURLtoBlob(window.BABYLON_ASSETS.glb);
+          arViewer.src = URL.createObjectURL(blob);
+        } else {
+          arViewer.src = "bathroomvanity.glb";
+        }
+      } catch (e) {
+        console.warn("Could not set arViewer src:", e);
+        arViewer.src = "bathroomvanity.glb";
+      }
+    }
+
     const createScene = async function () {
       scene = new BABYLON.Scene(engine);
       
       // Clean White Studio Background
       scene.clearColor = new BABYLON.Color4(1.0, 1.0, 1.0, 1.0);
 
-      // 1. Sàn bắt bóng đổ tiếp xúc mờ dịu (Contact Shadow Catcher)
+      // Sàn bắt bóng đổ tiếp xúc mờ dịu trên nền trắng thuần (Pure White Studio Floor, No Grid Lines)
       const shadowPlane = BABYLON.MeshBuilder.CreatePlane("groundShadow", { size: 100 }, scene);
       shadowPlane.rotation.x = Math.PI / 2;
       shadowPlane.position.y = -0.214; // Cao độ tiếp xúc sàn của 4 chân tủ
       const shadowMat = new BABYLON.BackgroundMaterial("shadowMat", scene);
       shadowMat.primaryColor = new BABYLON.Color3(1, 1, 1);
-      shadowMat.shadowLevel = 0.65;
+      shadowMat.shadowLevel = 0.55;
       shadowPlane.material = shadowMat;
       shadowPlane.receiveShadows = true;
-
-      // 2. Sàn lưới GridMaterial trong suốt không thấy biên (Infinite Studio Grid Floor)
-      const gridPlane = BABYLON.MeshBuilder.CreatePlane("groundGrid", { size: 100 }, scene);
-      gridPlane.rotation.x = Math.PI / 2;
-      gridPlane.position.y = -0.2138; // Nằm trên mặt bóng đổ 0.2mm để không bị z-fighting
-      
-      if (typeof BABYLON.GridMaterial !== "undefined") {
-        const gridMat = new BABYLON.GridMaterial("gridMat", scene);
-        gridMat.mainColor = new BABYLON.Color3(1.0, 1.0, 1.0);
-        gridMat.lineColor = new BABYLON.Color3(0.80, 0.80, 0.84);
-        gridMat.gridRatio = 0.2; // Ô lưới 20cm
-        gridMat.majorUnitFrequency = 5; // Đường chính cách mỗi 1m
-        gridMat.minorUnitVisibility = 0.38;
-        gridMat.opacity = 0.40; // Độ mờ vừa vặn để bóng đổ trên sàn hiển thị sắc nét
-        gridPlane.material = gridMat;
-      }
 
       // Camera: Sandbox Default Parameters & Centered on Vanity
       // Sandbox defaults: alpha: -5.518, beta: 1.162, radius: 1.935, target: (0, 0.332, -0.473)
@@ -1132,15 +1172,18 @@
         envTexture.rotationY = 5.54;
         envTexture.level = 1.0;
         scene.environmentTexture = envTexture;
-        scene.environmentIntensity = 1.0; // Babylon Sandbox default
+        scene.environmentIntensity = 0.80; // Giảm 20% ánh sáng (1.0 -> 0.80)
       } catch (e) {
         console.warn("Falling back to online Babylon Sandbox reflection map:", e);
         const envTexture = BABYLON.CubeTexture.CreateFromPrefilteredData("https://assets.babylonjs.com/environments/sanGiuseppeBridge.env", scene, ".env");
         envTexture.rotationY = 5.54;
         envTexture.level = 1.0;
         scene.environmentTexture = envTexture;
-        scene.environmentIntensity = 1.0;
+        scene.environmentIntensity = 0.80;
       }
+
+      // Khởi tạo AR model-viewer với Blob URL ngay trong bộ nhớ
+      initARViewer();
 
       // Photographic Tone Mapping & Color Calibration (Filmic ACES)
       scene.imageProcessingConfiguration.toneMappingEnabled = true;
@@ -1206,25 +1249,25 @@
             light.position = node.getAbsolutePosition().clone();
 
             if (node.name === "VRayLight001") {
-              light.intensity = 0.85; // Đèn trần
+              light.intensity = 0.68; // Đèn trần (giảm 20%: 0.85 -> 0.68)
               shadowGenTop = new BABYLON.ShadowGenerator(2048, light);
               shadowGenTop.usePercentageCloserFiltering = true;
               shadowGenTop.filteringQuality = BABYLON.ShadowGenerator.QUALITY_HIGH;
               shadowGenTop.bias = 0.001;
               shadowGenTop.normalBias = 0.015;
             } else if (node.name === "VRayLight002") {
-              light.intensity = 1.6; // Đèn chính trước-phải
+              light.intensity = 1.28; // Đèn chính trước-phải (giảm 20%: 1.6 -> 1.28)
               shadowGenKey = new BABYLON.ShadowGenerator(2048, light);
               shadowGenKey.usePercentageCloserFiltering = true;
               shadowGenKey.filteringQuality = BABYLON.ShadowGenerator.QUALITY_HIGH;
               shadowGenKey.bias = 0.001;
               shadowGenKey.normalBias = 0.015;
             } else if (node.name === "VRayLight003") {
-              light.intensity = 1.1; // Đèn phụ trước-trái
+              light.intensity = 0.88; // Đèn phụ trước-trái (giảm 20%: 1.1 -> 0.88)
             } else if (node.name === "VRayLight004") {
-              light.intensity = 0.35; // Đèn sau lưng
+              light.intensity = 0.28; // Đèn sau lưng (giảm 20%: 0.35 -> 0.28)
             } else {
-              light.intensity = 1.0;
+              light.intensity = 0.80; // Giảm 20%
             }
             light.diffuse = new BABYLON.Color3(1.0, 1.0, 1.0);
           });
@@ -1701,7 +1744,28 @@
     }
 
     async function launchDirectAR() {
-      // 1. Try Native WebXR AR Session first if available
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      const isAndroid = /android/i.test(navigator.userAgent);
+      const mv = document.getElementById("arViewer");
+
+      // 1. Mobile AR on iPad / iPhone / Android via <model-viewer> Quick Look / Scene Viewer
+      if (mv) {
+        if (!mv.src) {
+          mv.src = "bathroomvanity.glb";
+        }
+        const defaultArBtn = document.getElementById("defaultArButton");
+        if (defaultArBtn) {
+          defaultArBtn.click();
+          closeARModal();
+          return;
+        } else if (typeof mv.activateAR === "function") {
+          mv.activateAR();
+          closeARModal();
+          return;
+        }
+      }
+
+      // 2. Try Native WebXR AR Session if available
       try {
         if (navigator.xr && await BABYLON.WebXRSessionManager.IsSessionSupportedAsync("immersive-ar")) {
           const xr = await scene.createDefaultXRExperienceAsync({
@@ -1715,24 +1779,15 @@
         console.warn("WebXR AR session not directly accessible, attempting mobile fallback:", err);
       }
 
-      // 2. Android Scene Viewer
-      const isAndroid = /android/i.test(navigator.userAgent);
+      // 3. Android Scene Viewer direct intent fallback
       if (isAndroid) {
-        const glbUrl = window.location.href.replace(/index\.html.*$/, "") + "model/bathroomvanity.glb";
+        const glbUrl = window.location.href.replace(/index\.html.*$/, "") + "bathroomvanity.glb";
         const intentUrl = `intent://arvr.google.com/scene-viewer/1.0?file=${encodeURIComponent(glbUrl)}&mode=ar_only#Intent;scheme=https;package=com.google.android.googlequicksearchbox;action=android.intent.action.VIEW;end;`;
         window.location.href = intentUrl;
         return;
       }
 
-      // 3. iOS / iPadOS Quick Look via model-viewer
-      const mv = document.getElementById("arViewer");
-      if (mv && typeof mv.activateAR === "function") {
-        mv.activateAR();
-        closeARModal();
-        return;
-      }
-
-      // Fallback
+      // Fallback: Show QR code modal
       showARModal();
     }
 
@@ -1791,6 +1846,12 @@
       if (btn) btn.classList.add("active");
     }
 
+    function closePhotoResultModal() {
+      const resModal = document.getElementById("photoResultModal");
+      if (resModal) resModal.style.display = "none";
+      scheduleResumeAutoRotate();
+    }
+
     async function executeRender() {
       const btn = document.getElementById("btnDoRender");
       const status = document.getElementById("renderStatus");
@@ -1807,7 +1868,26 @@
         "4k": { width: 3840, height: 2160 },
         "2k": { width: 2560, height: 1440 }
       };
-      const dimensions = resMap[selectedRes] || resMap["8k"];
+      let dimensions = Object.assign({}, resMap[selectedRes] || resMap["8k"]);
+      let samples = selectedSamples;
+
+      // Clamp resolution to device GPU capabilities to prevent mobile/iPad WebGL crash
+      const maxTextureSize = (engine.getCaps() && engine.getCaps().maxRenderTextureSize) ? engine.getCaps().maxRenderTextureSize : 4096;
+      if (dimensions.width > maxTextureSize || dimensions.height > maxTextureSize) {
+        const aspect = dimensions.height / dimensions.width;
+        dimensions.width = maxTextureSize;
+        dimensions.height = Math.round(maxTextureSize * aspect);
+      }
+
+      const isMobileDevice = /iPad|iPhone|iPod|android/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      if (isMobileDevice) {
+        // Clamp to 3840x2160 and max 4 samples on mobile/iPad to prevent iOS out-of-memory crash
+        if (dimensions.width > 3840) {
+          dimensions.width = 3840;
+          dimensions.height = 2160;
+        }
+        if (samples > 4) samples = 4;
+      }
 
       const prevTarget = camera.target.clone();
       const prevRadius = camera.radius;
@@ -1837,15 +1917,45 @@
           status.style.display = "none";
           closePhotoModal();
 
-          // Trigger download
-          const a = document.createElement("a");
-          a.href = data;
-          const bgSuffix = selectedBg === "transparent" ? "_Transparent" : "";
-          a.download = `Bathroom_Vanity_${selectedRes.toUpperCase()}_${selectedSamples}xMSAA${bgSuffix}.png`;
-          a.click();
+          try {
+            const blob = dataURLtoBlob(data);
+            const blobUrl = URL.createObjectURL(blob);
+            const bgSuffix = selectedBg === "transparent" ? "_Transparent" : "";
+            const filename = `Bathroom_Vanity_${selectedRes.toUpperCase()}_${samples}xMSAA${bgSuffix}.png`;
+
+            if (isMobileDevice) {
+              // Show result modal for iPad / iOS: user can tap and hold to save to Photos or open full tab
+              const resModal = document.getElementById("photoResultModal");
+              const resImg = document.getElementById("photoResultImg");
+              const btnOpen = document.getElementById("btnOpenPhotoTab");
+              if (resImg) resImg.src = blobUrl;
+              if (btnOpen) {
+                btnOpen.onclick = () => {
+                  window.open(blobUrl, "_blank");
+                };
+              }
+              if (resModal) resModal.style.display = "flex";
+            } else {
+              // Desktop standard download
+              const a = document.createElement("a");
+              a.href = blobUrl;
+              a.download = filename;
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+              setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+            }
+          } catch (err) {
+            console.error("Screenshot export error:", err);
+            // Fallback to data URI directly
+            const a = document.createElement("a");
+            a.href = data;
+            a.download = `Bathroom_Vanity_${selectedRes.toUpperCase()}.png`;
+            a.click();
+          }
         },
         "image/png",
-        selectedSamples,
+        samples,
         true
       );
     }
