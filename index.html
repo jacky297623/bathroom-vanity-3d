@@ -1172,14 +1172,14 @@
         envTexture.rotationY = 5.54;
         envTexture.level = 1.0;
         scene.environmentTexture = envTexture;
-        scene.environmentIntensity = 1; // Giảm 20% ánh sáng (1.0 -> 0.80)
+        scene.environmentIntensity = 0.6; // Giảm 20% ánh sáng (1.0 -> 0.80)
       } catch (e) {
         console.warn("Falling back to online Babylon Sandbox reflection map:", e);
         const envTexture = BABYLON.CubeTexture.CreateFromPrefilteredData("https://assets.babylonjs.com/environments/sanGiuseppeBridge.env", scene, ".env");
         envTexture.rotationY = 5.54;
         envTexture.level = 1.0;
         scene.environmentTexture = envTexture;
-        scene.environmentIntensity = 1;
+        scene.environmentIntensity = 0.6;
       }
 
       // Khởi tạo AR model-viewer với Blob URL ngay trong bộ nhớ
@@ -1250,7 +1250,7 @@
             light.position = node.getAbsolutePosition().clone();
 
             if (node.name === "VRayLight001") {
-              light.intensity = 0.5; // Đèn trần dịu nhẹ, không làm chói sáng bề mặt kệ bên trong
+              light.intensity = 0.25; // Đèn trần dịu nhẹ, không làm chói sáng bề mặt kệ bên trong
               light.autoUpdateExtends = false;
               light.orthoLeft = -1.5;
               light.orthoRight = 1.5;
@@ -1259,27 +1259,27 @@
               light.shadowMinZ = 0.5;
               light.shadowMaxZ = 7.0;
               shadowGenTop = new BABYLON.ShadowGenerator(2048, light);
-              shadowGenTop.useBlurCloseExponentialShadowMap = true;
-              shadowGenTop.blurKernel = 24;
-              shadowGenTop.blurScale = 1;
-              shadowGenTop.depthScale = 50;
-              shadowGenTop.bias = 0.0004;
+              shadowGenTop.useContactHardeningShadow = true; // PCSS Area Soft Shadow
+              shadowGenTop.contactHardeningLightSizeUVRatio = 0.05;
+              shadowGenTop.filteringQuality = BABYLON.ShadowGenerator.QUALITY_HIGH;
+              shadowGenTop.bias = 0.0005;
+              shadowGenTop.normalBias = 0.005;
               shadowGenTop.darkness = 0;
             } else if (node.name === "VRayLight002") {
-              light.intensity = 4; // Đèn chính studio (Key Light) tạo bóng đổ mềm mại (Soft Shadow)
+              light.intensity = 1.35; // Đèn chính studio (Key Light) tạo Area Shadow (PCSS)
               light.autoUpdateExtends = false;
               light.orthoLeft = -1.6;
               light.orthoRight = 1.6;
               light.orthoTop = 1.6;
               light.orthoBottom = -1.6;
               light.shadowMinZ = 0.5;
-              light.shadowMaxZ = 5;
+              light.shadowMaxZ = 7.0;
               shadowGenKey = new BABYLON.ShadowGenerator(2048, light);
-              shadowGenKey.useBlurCloseExponentialShadowMap = true;
-              shadowGenKey.blurKernel = 24;
-              shadowGenKey.blurScale = 1;
-              shadowGenKey.depthScale = 50;
-              shadowGenKey.bias = 0.0004;
+              shadowGenKey.useContactHardeningShadow = true; // PCSS Area Soft Shadow
+              shadowGenKey.contactHardeningLightSizeUVRatio = 0.05;
+              shadowGenKey.filteringQuality = BABYLON.ShadowGenerator.QUALITY_HIGH;
+              shadowGenKey.bias = 0.0005;
+              shadowGenKey.normalBias = 0.005;
               shadowGenKey.darkness = 0;
             } else if (node.name === "VRayLight003") {
               light.intensity = 0.70; // Đèn phụ Fill Light trước-trái
