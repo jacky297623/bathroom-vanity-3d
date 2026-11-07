@@ -1250,10 +1250,10 @@
             light.position = node.getAbsolutePosition().clone();
 
             if (node.name === "VRayLight001") {
-              light.intensity = 0.25; // Đèn trần dịu nhẹ, không tạo shadow pass phụ để tiết kiệm 50% draw calls
+              light.intensity = 0.8; // Đèn trần dịu nhẹ, không tạo shadow pass phụ để tiết kiệm 50% draw calls
               light.autoUpdateExtends = false;
             } else if (node.name === "VRayLight002") {
-              light.intensity = 1.35; // Đèn chính studio (Key Light)
+              light.intensity = 4; // Đèn chính studio (Key Light)
               light.autoUpdateExtends = false;
               light.orthoLeft = -1.6;
               light.orthoRight = 1.6;
@@ -1271,7 +1271,7 @@
             } else if (node.name === "VRayLight003") {
               light.intensity = 0.70; // Đèn phụ Fill Light trước-trái
             } else if (node.name === "VRayLight004") {
-              light.intensity = 0.25; // Đèn sau lưng Rim Light
+              light.intensity = 0.5; // Đèn sau lưng Rim Light
             } else {
               light.intensity = 0.80;
             }
