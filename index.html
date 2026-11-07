@@ -1250,23 +1250,10 @@
             light.position = node.getAbsolutePosition().clone();
 
             if (node.name === "VRayLight001") {
-              light.intensity = 0.25; // Đèn trần dịu nhẹ, không làm chói sáng bề mặt kệ bên trong
+              light.intensity = 0.25; // Đèn trần dịu nhẹ, không tạo shadow pass phụ để tiết kiệm 50% draw calls
               light.autoUpdateExtends = false;
-              light.orthoLeft = -1.5;
-              light.orthoRight = 1.5;
-              light.orthoTop = 1.5;
-              light.orthoBottom = -1.5;
-              light.shadowMinZ = 0.5;
-              light.shadowMaxZ = 7.0;
-              shadowGenTop = new BABYLON.ShadowGenerator(2048, light);
-              shadowGenTop.useContactHardeningShadow = true; // PCSS Area Soft Shadow
-              shadowGenTop.contactHardeningLightSizeUVRatio = 0.05;
-              shadowGenTop.filteringQuality = BABYLON.ShadowGenerator.QUALITY_HIGH;
-              shadowGenTop.bias = 0.0005;
-              shadowGenTop.normalBias = 0.005;
-              shadowGenTop.darkness = 0;
             } else if (node.name === "VRayLight002") {
-              light.intensity = 1.35; // Đèn chính studio (Key Light) tạo Area Shadow (PCSS)
+              light.intensity = 1.35; // Đèn chính studio (Key Light)
               light.autoUpdateExtends = false;
               light.orthoLeft = -1.6;
               light.orthoRight = 1.6;
@@ -1274,13 +1261,13 @@
               light.orthoBottom = -1.6;
               light.shadowMinZ = 0.5;
               light.shadowMaxZ = 7.0;
-              shadowGenKey = new BABYLON.ShadowGenerator(2048, light);
-              shadowGenKey.useContactHardeningShadow = true; // PCSS Area Soft Shadow
-              shadowGenKey.contactHardeningLightSizeUVRatio = 0.05;
-              shadowGenKey.filteringQuality = BABYLON.ShadowGenerator.QUALITY_HIGH;
-              shadowGenKey.bias = 0.0005;
-              shadowGenKey.normalBias = 0.005;
-              shadowGenKey.darkness = 0;
+              // Siêu nhẹ & mượt mà 60 FPS: Dùng PCF Medium 1024x1024 thay vì PCSS nặng nề
+              shadowGenKey = new BABYLON.ShadowGenerator(1024, light);
+              shadowGenKey.usePercentageCloserFiltering = true;
+              shadowGenKey.filteringQuality = BABYLON.ShadowGenerator.QUALITY_MEDIUM;
+              shadowGenKey.bias = 0.001;
+              shadowGenKey.normalBias = 0.01;
+              shadowGenKey.darkness = 0.15; // Rìa bóng đổ êm ái, chuyển tiếp mềm mịn
             } else if (node.name === "VRayLight003") {
               light.intensity = 0.70; // Đèn phụ Fill Light trước-trái
             } else if (node.name === "VRayLight004") {
@@ -1696,7 +1683,7 @@
         targetA = -5.518; targetB = 1.162; targetR = 1.935;
       } else if (preset === "front") {
         // Front view looking directly at the cabinet doors
-        targetA = Math.PI / 2.0; targetB = Math.PI / 2.05; targetR = 2.00;
+        targetA = -Math.PI / 2.0; targetB = Math.PI / 2.15; targetR = 2.00;
       } else if (preset === "side") {
         // Side view looking directly at the right side profile of vanity
         targetA = 0.0; targetB = Math.PI / 2.05; targetR = 1.95;
