@@ -1172,14 +1172,14 @@
         envTexture.rotationY = 5.54;
         envTexture.level = 1.0;
         scene.environmentTexture = envTexture;
-        scene.environmentIntensity = 0.6; // Giảm 20% ánh sáng (1.0 -> 0.80)
+        scene.environmentIntensity = 1; // Giảm 20% ánh sáng (1.0 -> 0.80)
       } catch (e) {
         console.warn("Falling back to online Babylon Sandbox reflection map:", e);
         const envTexture = BABYLON.CubeTexture.CreateFromPrefilteredData("https://assets.babylonjs.com/environments/sanGiuseppeBridge.env", scene, ".env");
         envTexture.rotationY = 5.54;
         envTexture.level = 1.0;
         scene.environmentTexture = envTexture;
-        scene.environmentIntensity = 0.6;
+        scene.environmentIntensity = 1;
       }
 
       // Khởi tạo AR model-viewer với Blob URL ngay trong bộ nhớ
@@ -1266,7 +1266,7 @@
               shadowGenTop.bias = 0.0004;
               shadowGenTop.darkness = 0;
             } else if (node.name === "VRayLight002") {
-              light.intensity = 2.5; // Đèn chính studio (Key Light) tạo bóng đổ mềm mại (Soft Shadow)
+              light.intensity = 4; // Đèn chính studio (Key Light) tạo bóng đổ mềm mại (Soft Shadow)
               light.autoUpdateExtends = false;
               light.orthoLeft = -1.6;
               light.orthoRight = 1.6;
